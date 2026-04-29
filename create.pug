@@ -1,0 +1,15 @@
+extends layout
+
+block content
+  h1 Создать пользователя
+
+  form(action="/users" method="POST")
+    .field
+      label(for="name") Имя
+      input#name(type="text" name="name" placeholder="Иван Иванов" required)
+    .field
+      label(for="email") Email
+      input#email(type="email" name="email" placeholder="ivan@example.com" required)
+    .form-actions
+      button.btn(type="submit") Создать
+      a.btn.btn-secondary(href="/users") Отмена

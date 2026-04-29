@@ -1,0 +1,15 @@
+extends layout
+
+block content
+  h1 Редактировать пользователя
+
+  form(action=`/users/${user.id}/edit` method="POST")
+    .field
+      label(for="name") Имя
+      input#name(type="text" name="name" value=user.name required)
+    .field
+      label(for="email") Email
+      input#email(type="email" name="email" value=user.email required)
+    .form-actions
+      button.btn(type="submit") Сохранить
+      a.btn.btn-secondary(href="/users") Отмена

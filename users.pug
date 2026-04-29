@@ -1,0 +1,27 @@
+extends layout
+
+block content
+  .page-header
+    h1 Список пользователей
+    a.btn(href="/users/create") + Добавить
+
+  if users.length === 0
+    p.empty Пользователей пока нет.
+  else
+    table
+      thead
+        tr
+          th ID
+          th Имя
+          th Email
+          th Действия
+      tbody
+        each user in users
+          tr
+            td= user.id
+            td= user.name
+            td= user.email
+            td.actions
+              a.btn.btn-sm.btn-edit(href=`/users/${user.id}/edit`) Изменить
+              form(action=`/users/${user.id}/delete` method="POST" style="display:inline")
+                button.btn.btn-sm.btn-delete(type="submit" onclick="return confirm('Удалить пользователя?')") Удалить
