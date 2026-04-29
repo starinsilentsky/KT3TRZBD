@@ -1,79 +1,54 @@
-const initSqlJs = require('sql.js');
-const fs = require('fs');
-const path = require('path');
+require('dotenv').config();
+const { Pool } = require('pg');
 
-const DB_PATH = path.join(__dirname, 'users.db');
+const pool = new Pool({
+  host:     process.env.DB_HOST,
+  port:     process.env.DB_PORT,
+  database: process.env.DB_NAME,
+  user:     process.env.DB_USER,
+  password: process.env.DB_PASSWORD,
+});
 
-let db;
+async function init() {
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS users (
+      id    SERIAL PRIMARY KEY,
+      name  TEXT NOT NULL,
+      email TEXT NOT NULL
+    )
+  `);
 
-async function getDb() {
-  if (db) return db;
-
-  const SQL = await initSqlJs();
-
-  if (fs.existsSync(DB_PATH)) {
-    const fileBuffer = fs.readFileSync(DB_PATH);
-    db = new SQL.Database(fileBuffer);
-  } else {
-    db = new SQL.Database();
-    db.run(`
-      CREATE TABLE IF NOT EXISTS users (
-        id    INTEGER PRIMARY KEY AUTOINCREMENT,
-        name  TEXT NOT NULL,
-        email TEXT NOT NULL
-      )
+  const { rows } = await pool.query('SELECT COUNT(*) FROM users');
+  if (rows[0].count === '0') {
+    await pool.query(`
+      INSERT INTO users (name, email) VALUES
+        ('Алиса Смирнова',  'alice@example.com'),
+        ('Борис Петров',    'boris@example.com'),
+        ('Вера Козлова',    'vera@example.com')
     `);
-    // Начальные данные
-    db.run("INSERT INTO users (name, email) VALUES ('Алиса Смирнова',  'alice@example.com')");
-    db.run("INSERT INTO users (name, email) VALUES ('Борис Петров',    'boris@example.com')");
-    db.run("INSERT INTO users (name, email) VALUES ('Вера Козлова',    'vera@example.com')");
-    save();
   }
-
-  return db;
-}
-
-function save() {
-  const data = db.export();
-  fs.writeFileSync(DB_PATH, Buffer.from(data));
-}
-
-function rowsToObjects(result) {
-  if (!result.length) return [];
-  const { columns, values } = result[0];
-  return values.map(row =>
-    Object.fromEntries(columns.map((col, i) => [col, row[i]]))
-  );
 }
 
 async function getAllUsers() {
-  const d = await getDb();
-  const result = d.exec('SELECT * FROM users ORDER BY id');
-  return rowsToObjects(result);
+  const { rows } = await pool.query('SELECT * FROM users ORDER BY id');
+  return rows;
 }
 
 async function getUserById(id) {
-  const d = await getDb();
-  const result = d.exec('SELECT * FROM users WHERE id = ?', [id]);
-  return rowsToObjects(result)[0] || null;
+  const { rows } = await pool.query('SELECT * FROM users WHERE id = $1', [id]);
+  return rows[0] || null;
 }
 
 async function createUser(name, email) {
-  const d = await getDb();
-  d.run('INSERT INTO users (name, email) VALUES (?, ?)', [name, email]);
-  save();
+  await pool.query('INSERT INTO users (name, email) VALUES ($1, $2)', [name, email]);
 }
 
 async function updateUser(id, name, email) {
-  const d = await getDb();
-  d.run('UPDATE users SET name = ?, email = ? WHERE id = ?', [name, email, id]);
-  save();
+  await pool.query('UPDATE users SET name = $1, email = $2 WHERE id = $3', [name, email, id]);
 }
 
 async function deleteUser(id) {
-  const d = await getDb();
-  d.run('DELETE FROM users WHERE id = ?', [id]);
-  save();
+  await pool.query('DELETE FROM users WHERE id = $1', [id]);
 }
 
-module.exports = { getAllUsers, getUserById, createUser, updateUser, deleteUser };
+module.exports = { init, getAllUsers, getUserById, createUser, updateUser, deleteUser };
